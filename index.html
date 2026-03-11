@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Demo — Sistem Keuangan WhatsApp</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070b12;--surface:#0e1420;--surface2:#141b28;--border:#1e2a3d;
+  --green:#00d68f;--green2:#00ff9d;--red:#ff4d6d;--blue:#3b82f6;
+  --yellow:#f59e0b;--purple:#a855f7;
+  --text:#e8edf5;--muted:#5a6a80;--muted2:#7b8fa8;
+  --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html{font-size:15px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden}
+
+/* ── SCENE SYSTEM ── */
+.scene{position:fixed;inset:0;opacity:0;pointer-events:none;
+  transition:opacity .6s ease;display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+.scene.active{opacity:1;pointer-events:all}
+
+/* ── PROGRESS BAR ── */
+#progress-bar{position:fixed;top:0;left:0;height:3px;
+  background:linear-gradient(90deg,var(--green),var(--blue));
+  transition:width .5s ease;z-index:1000;width:0%}
+
+/* ── SCENE COUNTER ── */
+#scene-counter{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  display:flex;gap:6px;z-index:1000}
+.sc-dot{width:6px;height:6px;border-radius:50%;background:var(--border);
+  transition:all .3s}
+.sc-dot.active{background:var(--green);width:20px;border-radius:3px}
+
+/* ── NAV BUTTONS ── */
+#nav-btns{position:fixed;bottom:20px;right:24px;display:flex;gap:8px;z-index:1000}
+.nav-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;justify-content:center}
+.nav-btn:hover{background:var(--green);color:#000;border-color:var(--green)}
+#nav-btns .auto-btn{width:auto;padding:0 14px;border-radius:20px;font-size:11px;
+  font-weight:700;letter-spacing:.5px}
+#nav-btns .auto-btn.playing{background:var(--green);color:#000;border-color:var(--green)}
+
+/* ── SCENE LABEL ── */
+.scene-label{position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:6px 16px;font-size:11px;font-weight:700;color:var(--muted2);
+  letter-spacing:.5px;z-index:1000;transition:all .3s}
+
+/* ── GRID NOISE TEXTURE ── */
+body::before{content:'';position:fixed;inset:0;
+  background-image:radial-gradient(circle at 20% 20%,rgba(0,214,143,.04) 0%,transparent 50%),
+    radial-gradient(circle at 80% 80%,rgba(59,130,246,.04) 0%,transparent 50%);
+  pointer-events:none;z-index:0}
+
+/* ═══════════════════════════════
+   SCENE 0 — INTRO
+═══════════════════════════════ */
+#s0{background:var(--bg);text-align:center;padding:40px 24px}
+.intro-badge{display:inline-flex;align-items:center;gap:8px;
+  background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);
+  border-radius:30px;padding:8px 20px;font-size:11px;font-weight:800;
+  color:var(--green);letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:32px;animation:fadeUp .8s .2s both}
+.intro-title{font-size:clamp(32px,6vw,64px);font-weight:900;line-height:1.1;
+  letter-spacing:-1.5px;margin-bottom:20px;animation:fadeUp .8s .4s both}
+.intro-title .line2{color:var(--green)}
+.intro-sub{font-size:clamp(14px,2vw,18px);color:var(--muted2);
+  max-width:480px;margin:0 auto 40px;line-height:1.6;animation:fadeUp .8s .6s both}
+.intro-features{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
+  animation:fadeUp .8s .8s both}
+.feat-pill{display:flex;align-items:center;gap:6px;padding:8px 16px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  font-size:12px;font-weight:700;color:var(--muted2)}
+.feat-pill span{color:var(--green)}
+.start-btn{margin-top:40px;padding:14px 36px;background:var(--green);
+  color:#000;border:none;border-radius:12px;font-family:var(--font);
+  font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;
+  animation:fadeUp .8s 1s both;letter-spacing:.3px}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,214,143,.3)}
+
+/* ═══════════════════════════════
+   SCENE 1 — WA CHAT DEMO
+═══════════════════════════════ */
+#s1{padding:20px;align-items:center;justify-content:center;gap:24px;flex-direction:row;flex-wrap:wrap}
+.wa-phone{width:300px;height:580px;background:#111b21;border-radius:36px;
+  border:2px solid #2a3942;overflow:hidden;position:relative;
+  box-shadow:0 40px 80px rgba(0,0,0,.6)}
+.wa-phone::before{content:'';position:absolute;top:12px;left:50%;
+  transform:translateX(-50%);width:80px;height:4px;
+  background:#2a3942;border-radius:2px;z-index:10}
+.wa-header{background:#1f2c34;padding:48px 14px 12px;
+  display:flex;align-items:center;gap:10px}
+.wa-av{width:36px;height:36px;background:var(--green);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.wa-info{flex:1}
+.wa-name{font-size:13px;font-weight:700;color:#e9edef}
+.wa-stat{font-size:10px;color:#8696a0}
+.wa-msgs{flex:1;overflow:hidden;padding:12px 10px;display:flex;flex-direction:column;gap:6px;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") #0b141a}
+.msg{max-width:220px;padding:7px 10px;border-radius:8px;font-size:11px;
+  line-height:1.5;position:relative;opacity:0;transform:translateY(10px);
+  transition:all .4s ease}
+.msg.show{opacity:1;transform:translateY(0)}
+.msg.recv{background:#1f2c34;color:#e9edef;border-radius:0 8px 8px 8px;align-self:flex-start}
+.msg.recv::before{content:'';position:absolute;top:0;left:-6px;
+  border:6px solid transparent;border-right-color:#1f2c34;border-top:0}
+.msg.sent{background:#005c4b;color:#e9edef;border-radius:8px 0 8px 8px;align-self:flex-end}
+.msg.sent::after{content:'';position:absolute;top:0;right:-6px;
+  border:6px solid transparent;border-left-color:#005c4b;border-top:0}
+.msg-time{font-size:9px;color:#8696a0;text-align:right;margin-top:3px}
+.msg-bot{background:#1f2c34;font-family:var(--mono);white-space:pre;font-size:10px}
+.wa-input{background:#1f2c34;padding:10px;display:flex;align-items:center;gap:8px}
+.wa-input-box{flex:1;background:#2a3942;border-radius:20px;padding:8px 14px;
+  font-size:11px;color:#8696a0}
+.wa-send{width:36px;height:36px;background:var(--green);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+
+.scene-info{max-width:320px}
+.si-badge{display:inline-block;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);
+  border-radius:20px;padding:4px 12px;font-size:10px;font-weight:800;
+  color:var(--green);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.si-title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:10px;line-height:1.2}
+.si-desc{font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:16px}
+.si-points{display:flex;flex-direction:column;gap:8px}
+.si-pt{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted2)}
+.si-pt::before{content:'✓';color:var(--green);font-weight:800;flex-shrink:0;margin-top:1px}
+
+/* ═══════════════════════════════
+   SCENE 2 — DASHBOARD KPI
+═══════════════════════════════ */
+#s2{padding:20px;flex-direction:column;gap:16px;max-width:900px;margin:0 auto;width:100%}
+.dash-header{display:flex;align-items:center;justify-content:space-between;
+  padding:0 0 8px;border-bottom:1px solid var(--border)}
+.dash-title{font-size:18px;font-weight:800;letter-spacing:-.5px}
+.dash-live{display:flex;align-items:center;gap:6px;font-size:11px;
+  font-weight:700;color:var(--green)}
+.dash-live::before{content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--green);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.dash-filter{display:flex;gap:8px}
+.filt{padding:5px 12px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;font-size:11px;font-weight:700;color:var(--muted2);cursor:pointer}
+.filt.on{background:rgba(0,214,143,.15);border-color:var(--green);color:var(--green)}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px;position:relative;overflow:hidden;opacity:0;transform:translateY(20px);
+  transition:all .5s ease}
+.kpi.show{opacity:1;transform:translateY(0)}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--c,var(--green))}
+.kpi::before{content:attr(data-icon);position:absolute;right:14px;top:14px;font-size:22px;opacity:.5}
+.kpi-lbl{font-size:10px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:20px;font-weight:900;color:var(--c,var(--green));
+  font-family:var(--mono);letter-spacing:-1px}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px}
+.kpi-arrow{font-size:10px}
+
+.dash-mid{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+@media(max-width:640px){.dash-mid{grid-template-columns:1fr}}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;
+  opacity:0;transition:all .6s ease}
+.dash-card.show{opacity:1}
+.dc-title{font-size:10px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--muted);margin-bottom:14px;
+  display:flex;align-items:center;justify-content:space-between}
+.dc-badge{background:rgba(0,214,143,.1);color:var(--green);padding:2px 8px;
+  border-radius:10px;font-size:9px}
+
+/* BAR CHART */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-lbl{font-size:11px;font-weight:600;color:var(--text);min-width:90px}
+.bar-track{flex:1;background:var(--surface2);border-radius:3px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.bar-val{font-size:10px;font-family:var(--mono);color:var(--muted2);min-width:60px;text-align:right}
+
+/* DONUT */
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-svg{flex-shrink:0}
+.donut-legend{display:flex;flex-direction:column;gap:8px}
+.dl-item{display:flex;align-items:center;gap:6px;font-size:11px}
+.dl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.dl-name{color:var(--muted2);flex:1}
+.dl-val{font-family:var(--mono);font-size:10px;color:var(--text)}
+
+/* RANKING */
+.rank-item{display:flex;align-items:center;gap:10px;padding:8px 0;
+  border-bottom:1px solid var(--border)}
+.rank-item:last-child{border-bottom:none}
+.rank-num{width:22px;height:22px;border-radius:6px;background:var(--surface2);
+  font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;color:var(--muted2)}
+.rank-num.gold{background:rgba(245,158,11,.15);color:var(--yellow)}
+.rank-av{width:30px;height:30px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.rank-info{flex:1}
+.rank-name{font-size:12px;font-weight:700}
+.rank-role{font-size:10px;color:var(--muted)}
+.rank-amt{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red)}
+
+/* ═══════════════════════════════
+   SCENE 3 — TRANSAKSI TAB
+═══════════════════════════════ */
+#s3{padding:20px;flex-direction:column;gap:14px;max-width:900px;margin:0 auto;width:100%}
+.tab-nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:4px;width:fit-content}
+.tab-btn{padding:7px 16px;border-radius:7px;font-size:12px;font-weight:700;
+  color:var(--muted2);cursor:pointer;transition:all .2s;border:none;background:none;
+  font-family:var(--font)}
+.tab-btn.active{background:var(--green);color:#000}
+.txn-table{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.txn-head{display:grid;grid-template-columns:1.5fr .7fr .9fr .9fr .7fr;
+  padding:10px 16px;background:var(--surface2);
+  font-size:10px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--muted)}
+.txn-row{display:grid;grid-template-columns:1.5fr .7fr .9fr .9fr .7fr;
+  padding:12px 16px;border-top:1px solid var(--border);
+  font-size:12px;align-items:center;opacity:0;transform:translateX(-10px);
+  transition:all .4s ease}
+.txn-row.show{opacity:1;transform:translateX(0)}
+.txn-row:hover{background:var(--surface2)}
+.txn-cat{display:flex;align-items:center;gap:8px}
+.txn-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;flex-shrink:0}
+.txn-name{font-weight:600}
+.txn-ket{font-size:10px;color:var(--muted)}
+.badge{padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700}
+.badge-out{background:rgba(255,77,109,.1);color:var(--red)}
+.badge-in{background:rgba(0,214,143,.1);color:var(--green)}
+.badge-pindah{background:rgba(59,130,246,.1);color:var(--blue)}
+.txn-amt{font-family:var(--mono);font-size:12px;font-weight:700}
+.txn-amt.out{color:var(--red)}
+.txn-amt.in{color:var(--green)}
+.txn-akun{display:flex;align-items:center;gap:4px}
+.akun-pill{background:var(--surface2);border:1px solid var(--border);
+  border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;color:var(--muted2)}
+
+/* ═══════════════════════════════
+   SCENE 4 — AKUN / NERACA
+═══════════════════════════════ */
+#s4{padding:20px;flex-direction:row;flex-wrap:wrap;gap:16px;
+  align-items:flex-start;justify-content:center;max-width:900px;margin:0 auto;width:100%}
+.akun-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;flex:1;min-width:280px}
+.akun-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:18px;position:relative;overflow:hidden;opacity:0;transform:scale(.95);
+  transition:all .5s ease}
+.akun-card.show{opacity:1;transform:scale(1)}
+.akun-card::before{content:attr(data-icon);position:absolute;right:14px;bottom:14px;
+  font-size:36px;opacity:.07}
+.akun-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.akun-name{font-size:12px;font-weight:800;text-transform:uppercase;
+  letter-spacing:1px;color:var(--muted2)}
+.akun-status{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.akun-saldo{font-size:22px;font-weight:900;font-family:var(--mono);
+  letter-spacing:-1px;margin-bottom:6px}
+.akun-sub{font-size:10px;color:var(--muted);display:flex;gap:12px}
+.akun-flow{font-size:10px;font-weight:700}
+.akun-flow.up{color:var(--green)}
+.akun-flow.dn{color:var(--red)}
+.akun-bar{height:3px;background:var(--surface2);border-radius:2px;margin-top:10px}
+.akun-bar-fill{height:100%;border-radius:2px;width:0;transition:width 1.5s ease}
+
+.neraca-card{flex:1;min-width:260px;max-width:340px;background:var(--surface);
+  border:1px solid var(--border);border-radius:14px;padding:20px;
+  opacity:0;transition:all .6s .3s ease}
+.neraca-card.show{opacity:1}
+.neraca-title{font-size:11px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--muted);margin-bottom:16px}
+.neraca-row{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.neraca-row:last-child{border-bottom:none;padding-top:14px;margin-top:4px}
+.neraca-row.total{font-weight:800;font-size:14px}
+.nr-val{font-family:var(--mono);font-weight:700}
+.nr-val.green{color:var(--green)}
+.nr-val.red{color:var(--red)}
+.balance-badge{display:flex;align-items:center;gap:6px;margin-top:14px;
+  background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);
+  border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;color:var(--green)}
+
+/* ═══════════════════════════════
+   SCENE 5 — OUTRO / CTA
+═══════════════════════════════ */
+#s5{text-align:center;padding:40px 24px;flex-direction:column;gap:0}
+.outro-icon{font-size:64px;margin-bottom:24px;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.outro-title{font-size:clamp(28px,5vw,52px);font-weight:900;
+  letter-spacing:-1.5px;margin-bottom:12px;line-height:1.1}
+.outro-title em{color:var(--green);font-style:normal}
+.outro-sub{font-size:15px;color:var(--muted2);max-width:480px;
+  margin:0 auto 36px;line-height:1.6}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.cta-primary{padding:14px 32px;background:var(--green);color:#000;
+  border:none;border-radius:12px;font-family:var(--font);font-size:14px;
+  font-weight:800;cursor:pointer;text-decoration:none;
+  transition:all .2s;letter-spacing:.3px}
+.cta-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,214,143,.3)}
+.cta-secondary{padding:14px 32px;background:transparent;color:var(--text);
+  border:1px solid var(--border);border-radius:12px;font-family:var(--font);
+  font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;
+  transition:all .2s}
+.cta-secondary:hover{border-color:var(--green);color:var(--green)}
+.cta-generator{padding:14px 32px;background:transparent;color:var(--blue);
+  border:1.5px solid var(--blue);border-radius:12px;font-family:var(--font);
+  font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;
+  transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.cta-generator:hover{background:rgba(59,130,246,.12);transform:translateY(-2px);box-shadow:0 8px 24px rgba(59,130,246,.2)}
+.outro-stats{display:flex;gap:32px;justify-content:center;margin-top:48px;flex-wrap:wrap}
+.os{text-align:center}
+.os-val{font-size:32px;font-weight:900;font-family:var(--mono);color:var(--green);
+  letter-spacing:-1px}
+.os-lbl{font-size:11px;color:var(--muted2);margin-top:4px;font-weight:600}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.fade-up{animation:fadeUp .6s both}
+
+/* ── DONUT ANIMATION ── */
+.donut-ring{transition:stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="scene-counter"></div>
+<div class="scene-label" id="scene-label">Intro</div>
+
+<!-- ═══ SCENE 0: INTRO ═══ -->
+<div class="scene active" id="s0">
+  <div class="intro-badge">&#127909; Demo Interaktif</div>
+  <h1 class="intro-title">Sistem Keuangan<br><span class="line2">via WhatsApp</span></h1>
+  <p class="intro-sub">Catat pemasukan &amp; pengeluaran keluarga hanya lewat chat WA — dashboard otomatis, laporan real-time, gratis selamanya.</p>
+  <div class="intro-features">
+    <div class="feat-pill"><span>&#128172;</span> Catat via WA</div>
+    <div class="feat-pill"><span>&#128202;</span> Dashboard Live</div>
+    <div class="feat-pill"><span>&#128209;</span> Laporan Otomatis</div>
+    <div class="feat-pill"><span>&#127968;</span> Multi Anggota</div>
+    <div class="feat-pill"><span>&#128176;</span> Gratis Selamanya</div>
+  </div>
+  <button class="start-btn" onclick="startDemo()">&#9654; Mulai Demo</button>
+</div>
+
+<!-- ═══ SCENE 1: WA CHAT ═══ -->
+<div class="scene" id="s1">
+  <div class="wa-phone" id="wa-phone">
+    <div class="wa-header">
+      <div class="wa-av">&#129302;</div>
+      <div class="wa-info">
+        <div class="wa-name">Bot Keuangan Keluarga</div>
+        <div class="wa-stat">online</div>
+      </div>
+    </div>
+    <div class="wa-msgs" id="wa-msgs"></div>
+    <div class="wa-input">
+      <div class="wa-input-box" id="wa-typing">Ketik pesan...</div>
+      <div class="wa-send">&#8593;</div>
+    </div>
+  </div>
+  <div class="scene-info">
+    <div class="si-badge">Fitur 1</div>
+    <h2 class="si-title">Catat Transaksi<br>Lewat WhatsApp</h2>
+    <p class="si-desc">Tidak perlu buka aplikasi khusus. Cukup kirim pesan WA dengan format sederhana — langsung tercatat dan dibalas otomatis.</p>
+    <div class="si-points">
+      <div class="si-pt">Format mudah: <code style="background:#1e2a3d;padding:2px 6px;border-radius:4px;font-size:11px">out makan 25000 cash</code></div>
+      <div class="si-pt">Balas otomatis dengan ringkasan saldo</div>
+      <div class="si-pt">Bisa dari group WA atau chat pribadi</div>
+      <div class="si-pt">Laporan bulanan kirim otomatis</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCENE 2: DASHBOARD KPI ═══ -->
+<div class="scene" id="s2">
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">&#128202; Dashboard Keuangan</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="dash-live">LIVE</div>
+      <div class="dash-filter">
+        <div class="filt on">Mar 2026</div>
+        <div class="filt">Semua Akun</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi" data-icon="&#128181;" style="--c:var(--green)">
+      <div class="kpi-lbl">Total Pemasukan</div>
+      <div class="kpi-val" id="kv1">Rp 0</div>
+      <div class="kpi-sub"><span class="kpi-arrow" style="color:var(--green)">&#9650;</span> 14 transaksi bulan ini</div>
+    </div>
+    <div class="kpi" data-icon="&#128184;" style="--c:var(--red)">
+      <div class="kpi-lbl">Total Pengeluaran</div>
+      <div class="kpi-val" id="kv2">Rp 0</div>
+      <div class="kpi-sub"><span class="kpi-arrow" style="color:var(--red)">&#9660;</span> 38 transaksi bulan ini</div>
+    </div>
+    <div class="kpi" data-icon="&#127974;" style="--c:var(--blue)">
+      <div class="kpi-lbl">Saldo Akhir</div>
+      <div class="kpi-val" id="kv3">Rp 0</div>
+      <div class="kpi-sub"><span style="color:var(--blue)">&#9632;</span> Surplus bulan ini</div>
+    </div>
+    <div class="kpi" data-icon="&#128200;" style="--c:var(--yellow)">
+      <div class="kpi-lbl">Rasio Pengeluaran</div>
+      <div class="kpi-val" id="kv4" style="--c:var(--yellow)">0%</div>
+      <div class="kpi-sub"><span style="color:var(--yellow)">&#9679;</span> Waspada &gt;60%</div>
+    </div>
+  </div>
+
+  <div class="dash-mid">
+    <div class="dash-card" id="dc1">
+      <div class="dc-title">Pengeluaran per Kategori <span class="dc-badge">bulan ini</span></div>
+      <div id="bar-chart"></div>
+    </div>
+    <div class="dash-card" id="dc2">
+      <div class="dc-title">Ranking Pengeluaran</div>
+      <div id="rank-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCENE 3: TRANSAKSI ═══ -->
+<div class="scene" id="s3">
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+    <div class="dash-title">&#129518; Riwayat Transaksi</div>
+    <div class="tab-nav">
+      <button class="tab-btn active">Semua</button>
+      <button class="tab-btn">Pengeluaran</button>
+      <button class="tab-btn">Pemasukan</button>
+    </div>
+  </div>
+  <div class="txn-table">
+    <div class="txn-head">
+      <div>Kategori</div><div>Tipe</div><div>Nominal</div><div>Akun</div><div>Waktu</div>
+    </div>
+    <div id="txn-rows"></div>
+  </div>
+</div>
+
+<!-- ═══ SCENE 4: AKUN / NERACA ═══ -->
+<div class="scene" id="s4">
+  <div style="width:100%;margin-bottom:4px">
+    <div class="dash-title">&#127974; Saldo Per Rekening</div>
+    <div style="font-size:12px;color:var(--muted2);margin-top:4px">Real-time — otomatis update setiap transaksi</div>
+  </div>
+  <div class="akun-cards" id="akun-cards"></div>
+  <div class="neraca-card" id="neraca-card">
+    <div class="neraca-title">&#128218; Neraca Sistem</div>
+    <div class="neraca-row">
+      <span>Total Pemasukan</span>
+      <span class="nr-val green">Rp 11.800.000</span>
+    </div>
+    <div class="neraca-row">
+      <span>Total Pengeluaran</span>
+      <span class="nr-val red">Rp 8.125.000</span>
+    </div>
+    <div class="neraca-row">
+      <span>Transfer Internal</span>
+      <span class="nr-val" style="color:var(--blue)">Rp 1.500.000</span>
+    </div>
+    <div class="neraca-row total">
+      <span>Saldo Bersih</span>
+      <span class="nr-val green">Rp 3.675.000</span>
+    </div>
+    <div class="balance-badge">&#9989; SISTEM BALANCE — Tidak ada selisih</div>
+  </div>
+</div>
+
+<!-- ═══ SCENE 5: OUTRO ═══ -->
+<div class="scene" id="s5">
+  <div class="outro-icon">&#127881;</div>
+  <h2 class="outro-title">Siap Mulai<br><em>Kelola Keuangan</em>?</h2>
+  <p class="outro-sub">Setup 30 menit, gratis selamanya. Tidak perlu keahlian teknis — panduan lengkap sudah tersedia.</p>
+  <div class="cta-btns">
+    <a href="https://tutorialinstall.netlify.app" target="_blank" class="cta-primary">&#128218; Lihat Tutorial Setup</a>
+    <a href="https://tutorialinstall.netlify.app" target="_blank" class="cta-generator">&#128640; Mau Coba?</a>
+    <button class="cta-secondary" onclick="goScene(0)">&#9654; Ulangi Demo</button>
+  </div>
+  <div class="outro-stats">
+    <div class="os"><div class="os-val">100%</div><div class="os-lbl">Gratis</div></div>
+    <div class="os"><div class="os-val">30m</div><div class="os-lbl">Setup awal</div></div>
+    <div class="os"><div class="os-val">24/7</div><div class="os-lbl">Bot aktif</div></div>
+    <div class="os"><div class="os-val">&#8734;</div><div class="os-lbl">Anggota keluarga</div></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div id="nav-btns">
+  <button class="nav-btn" onclick="prevScene()">&#8592;</button>
+  <button class="nav-btn auto-btn" id="auto-btn" onclick="toggleAuto()">&#9654; AUTO</button>
+  <button class="nav-btn" onclick="nextScene()">&#8594;</button>
+</div>
+
+<script>
+var SCENES = ['s0','s1','s2','s3','s4','s5'];
+var LABELS = ['Intro','1. Catat via WA','2. Dashboard','3. Transaksi','4. Saldo Akun','Selesai'];
+var cur = 0, autoTimer = null, playing = false;
+
+// Build dots
+var counter = document.getElementById('scene-counter');
+SCENES.forEach(function(_,i){
+  var d = document.createElement('div');
+  d.className = 'sc-dot' + (i===0?' active':'');
+  d.onclick = function(){ goScene(i); };
+  counter.appendChild(d);
+});
+
+function updateDots(){
+  document.querySelectorAll('.sc-dot').forEach(function(d,i){
+    d.className = 'sc-dot' + (i===cur?' active':'');
+  });
+  document.getElementById('scene-label').textContent = LABELS[cur];
+  var pct = cur/(SCENES.length-1)*100;
+  document.getElementById('progress-bar').style.width = pct+'%';
+}
+
+function goScene(n){
+  document.getElementById(SCENES[cur]).classList.remove('active');
+  cur = Math.max(0, Math.min(SCENES.length-1, n));
+  document.getElementById(SCENES[cur]).classList.add('active');
+  updateDots();
+  initScene(cur);
+}
+
+function nextScene(){ if(cur < SCENES.length-1) goScene(cur+1); else stopAuto(); }
+function prevScene(){ goScene(cur-1); }
+function startDemo(){ goScene(1); startAuto(); }
+
+function startAuto(){
+  playing = true;
+  document.getElementById('auto-btn').classList.add('playing');
+  document.getElementById('auto-btn').textContent = '|| PAUSE';
+  scheduleNext();
+}
+function stopAuto(){
+  playing = false;
+  clearTimeout(autoTimer);
+  document.getElementById('auto-btn').classList.remove('playing');
+  document.getElementById('auto-btn').textContent = '\u25b6 AUTO';
+}
+function toggleAuto(){ playing ? stopAuto() : startAuto(); }
+function scheduleNext(){
+  if(!playing) return;
+  var delay = [0,6000,6000,5000,5000,99999][cur] || 5000;
+  autoTimer = setTimeout(function(){ if(playing) nextScene(); }, delay);
+}
+
+// ── SCENE INITIALIZERS ──
+function initScene(n){
+  clearTimeout(autoTimer);
+  if(playing) scheduleNext();
+  if(n===1) initWA();
+  if(n===2) initDash();
+  if(n===3) initTxn();
+  if(n===4) initAkun();
+}
+
+// ── SCENE 1: WA CHAT ──
+var waMessages = [
+  {type:'sent', text:'out makan 25000 cash nasi goreng'},
+  {type:'recv', text:'🔴⬇ *PENGELUARAN TERCATAT*\n━━━━━━━━━━━━━━━━━━\n\n📅 11 Mar 2026 07:30\n🏷 Kelompok : Rumah Tangga\n📂 Kategori : makan\n💸 Nominal : Rp 25.000\n\n━━━━━━━━━━━━━━━━━━\n💰 Saldo Global : Rp 3.675.000\n🟢 IN Bulan Ini : Rp 11.800.000\n🔴 OUT Bulan Ini : Rp 8.125.000\n📈 Rasio : 69%\n🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜', isBot:true},
+  {type:'sent', text:'cek'},
+  {type:'recv', text:'📊 LAPORAN MARET 2026\n\n💰 Saldo Awal   : Rp 1.500.000\n🟢 Pemasukan    : Rp 11.800.000\n🔴 Pengeluaran  : Rp 8.125.000\n━━━━━━━━━━━━━━━━━━\n🧮 Saldo Akhir  : Rp 5.175.000\n\n📈 Rasio: 69% 🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜\n🏥 Status: 🟡 WASPADA\n\n👥 Ranking:\n1️⃣ Ayah — Rp 5.200.000\n2️⃣ Bunda — Rp 2.925.000', isBot:true},
+];
+var waIdx = 0, waInitialized = false;
+function initWA(){
+  if(waInitialized) return;
+  waInitialized = true;
+  var container = document.getElementById('wa-msgs');
+  container.innerHTML = '';
+  waIdx = 0;
+  showNextWAMsg(container);
+}
+function showNextWAMsg(container){
+  if(waIdx >= waMessages.length) return;
+  var m = waMessages[waIdx++];
+  // Show typing indicator
+  if(m.type === 'recv'){
+    var typing = document.createElement('div');
+    typing.className = 'msg recv';
+    typing.style.cssText = 'opacity:1;transform:none;padding:8px 12px';
+    typing.innerHTML = '<span style="color:var(--green);font-size:11px">mengetik...</span>';
+    container.appendChild(typing);
+    container.scrollTop = container.scrollHeight;
+    setTimeout(function(){
+      container.removeChild(typing);
+      addMsg(container, m);
+      setTimeout(function(){ showNextWAMsg(container); }, 1800);
+    }, 1200);
+  } else {
+    // Show typing in input
+    var input = document.getElementById('wa-typing');
+    var text = m.text;
+    input.textContent = '';
+    var i = 0;
+    var typeInterval = setInterval(function(){
+      if(i < text.length){
+        input.textContent += text[i++];
+      } else {
+        clearInterval(typeInterval);
+        input.textContent = 'Ketik pesan...';
+        addMsg(container, m);
+        setTimeout(function(){ showNextWAMsg(container); }, 800);
+      }
+    }, 40);
+  }
+}
+function addMsg(container, m){
+  var el = document.createElement('div');
+  el.className = 'msg ' + m.type + (m.isBot?' msg-bot':'');
+  el.textContent = m.text;
+  var time = document.createElement('div');
+  time.className = 'msg-time';
+  time.textContent = '07:3' + (waIdx) + ' ✓✓';
+  el.appendChild(time);
+  container.appendChild(el);
+  setTimeout(function(){ el.classList.add('show'); }, 50);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── SCENE 2: DASHBOARD ──
+var dashInitialized = false;
+function initDash(){
+  if(dashInitialized) return;
+  dashInitialized = true;
+  // Show KPIs
+  var kpis = document.querySelectorAll('.kpi');
+  kpis.forEach(function(k,i){
+    setTimeout(function(){ k.classList.add('show'); }, i*150);
+  });
+  // Animate KPI values
+  setTimeout(function(){ animateCount('kv1', 0, 11800000, 'Rp ', ''); }, 200);
+  setTimeout(function(){ animateCount('kv2', 0, 8125000, 'Rp ', ''); }, 350);
+  setTimeout(function(){ animateCount('kv3', 0, 3675000, 'Rp ', ''); }, 500);
+  setTimeout(function(){ animatePct('kv4', 0, 69); }, 650);
+  // Show cards
+  setTimeout(function(){
+    document.getElementById('dc1').classList.add('show');
+    document.getElementById('dc2').classList.add('show');
+    buildBarChart();
+    buildRanking();
+  }, 800);
+}
+function animateCount(id, from, to, prefix, suffix){
+  var el = document.getElementById(id);
+  var start = Date.now(), dur = 1200;
+  var interval = setInterval(function(){
+    var prog = Math.min((Date.now()-start)/dur, 1);
+    var ease = 1-Math.pow(1-prog, 3);
+    var val = Math.round(from + (to-from)*ease);
+    el.textContent = prefix + val.toLocaleString('id-ID') + suffix;
+    if(prog >= 1) clearInterval(interval);
+  }, 16);
+}
+function animatePct(id, from, to){
+  var el = document.getElementById(id);
+  var start = Date.now(), dur = 1200;
+  var interval = setInterval(function(){
+    var prog = Math.min((Date.now()-start)/dur, 1);
+    var ease = 1-Math.pow(1-prog, 3);
+    el.textContent = Math.round(from+(to-from)*ease)+'%';
+    if(prog >= 1) clearInterval(interval);
+  }, 16);
+}
+var bars = [
+  {label:'Kewajiban', val:3200000, max:3200000, color:'#ff4d6d'},
+  {label:'Keluarga',  val:2100000, max:3200000, color:'#f59e0b'},
+  {label:'Transport', val:980000,  max:3200000, color:'#a855f7'},
+  {label:'Rmh Tangga',val:720000,  max:3200000, color:'#3b82f6'},
+  {label:'Pribadi',   val:540000,  max:3200000, color:'#06b6d4'},
+  {label:'Lainnya',   val:585000,  max:3200000, color:'#64748b'},
+];
+function buildBarChart(){
+  var c = document.getElementById('bar-chart');
+  c.innerHTML = '';
+  bars.forEach(function(b,i){
+    var row = document.createElement('div');
+    row.className = 'bar-row';
+    var pct = Math.round(b.val/b.max*100);
+    row.innerHTML = '<div class="bar-lbl">'+b.label+'</div>'+
+      '<div class="bar-track"><div class="bar-fill" style="background:'+b.color+'" data-pct="'+pct+'"></div></div>'+
+      '<div class="bar-val">'+formatRp(b.val)+'</div>';
+    c.appendChild(row);
+    setTimeout(function(){
+      row.querySelector('.bar-fill').style.width = pct+'%';
+    }, i*100+200);
+  });
+}
+var ranking = [
+  {name:'Budi', role:'Pencatat Utama', icon:'&#128104;', bg:'#1a2535', amt:5200000},
+  {name:'Ani',  role:'Pengelola Rumah', icon:'&#128105;', bg:'#1a2030', amt:2925000},
+];
+function buildRanking(){
+  var c = document.getElementById('rank-list');
+  c.innerHTML = '';
+  ranking.forEach(function(r,i){
+    var el = document.createElement('div');
+    el.className = 'rank-item';
+    el.innerHTML = '<div class="rank-num'+(i===0?' gold':'')+"\">"+(i+1)+'</div>'+
+      '<div class="rank-av" style="background:'+r.bg+'">'+r.icon+'</div>'+
+      '<div class="rank-info"><div class="rank-name">'+r.name+'</div><div class="rank-role">'+r.role+'</div></div>'+
+      '<div class="rank-amt">'+formatRp(r.amt)+'</div>';
+    c.appendChild(el);
+  });
+}
+function formatRp(n){
+  if(n>=1000000) return 'Rp '+(n/1000000).toFixed(1).replace('.0','')+'Jt';
+  if(n>=1000) return 'Rp '+(n/1000).toFixed(0)+'K';
+  return 'Rp '+n;
+}
+
+// ── SCENE 3: TRANSAKSI ──
+var txns = [
+  {cat:'makan', ico:'&#127860;', bg:'#1a2a1a', ket:'nasi goreng', tipe:'OUT', amt:-25000, akun:'cash', time:'07:30'},
+  {cat:'gaji',  ico:'&#128181;', bg:'#1a2a1a', ket:'gaji maret', tipe:'IN', amt:5000000, akun:'mandiri', time:'08:00'},
+  {cat:'bensin',ico:'&#9981;',   bg:'#1a1e2a', ket:'isi bensin', tipe:'OUT', amt:-80000, akun:'cash', time:'08:45'},
+  {cat:'sekolah',ico:'&#127979;',bg:'#1a2a1a', ket:'SPP maret', tipe:'OUT', amt:-850000, akun:'bca', time:'09:00'},
+  {cat:'bonus', ico:'&#127881;', bg:'#1a2a1a', ket:'bonus proyek', tipe:'IN', amt:1500000, akun:'mandiri', time:'10:30'},
+  {cat:'pindah',ico:'&#128260;', bg:'#1a1e2a', ket:'tarik tunai', tipe:'PINDAH', amt:500000, akun:'mandiri', time:'11:00'},
+  {cat:'listrik',ico:'&#9889;',  bg:'#2a1a1a', ket:'token listrik', tipe:'OUT', amt:-310000, akun:'bca', time:'13:00'},
+  {cat:'makan', ico:'&#127828;', bg:'1a2a1a',  ket:'makan siang', tipe:'OUT', amt:-45000, akun:'cash', time:'12:30'},
+];
+var txnInit = false;
+function initTxn(){
+  if(txnInit) return; txnInit = true;
+  var c = document.getElementById('txn-rows');
+  c.innerHTML = '';
+  txns.forEach(function(t,i){
+    var r = document.createElement('div');
+    r.className = 'txn-row';
+    var amtClass = t.tipe==='IN'?'in':'out';
+    var amtStr = (t.amt>0?'+':'')+formatRpFull(t.amt);
+    var badgeClass = t.tipe==='IN'?'badge-in':t.tipe==='PINDAH'?'badge-pindah':'badge-out';
+    r.innerHTML = '<div class="txn-cat"><div class="txn-ico" style="background:'+t.bg+'">'+t.ico+'</div>'+
+      '<div><div class="txn-name">'+t.cat+'</div><div class="txn-ket">'+t.ket+'</div></div></div>'+
+      '<div><span class="badge '+badgeClass+'">'+t.tipe+'</span></div>'+
+      '<div class="txn-amt '+amtClass+'">'+amtStr+'</div>'+
+      '<div class="txn-akun"><span class="akun-pill">'+t.akun+'</span></div>'+
+      '<div style="font-size:11px;color:var(--muted)">'+t.time+'</div>';
+    c.appendChild(r);
+    setTimeout(function(){ r.classList.add('show'); }, i*80+100);
+  });
+}
+function formatRpFull(n){
+  var abs = Math.abs(n);
+  return 'Rp '+abs.toLocaleString('id-ID');
+}
+
+// ── SCENE 4: AKUN ──
+var akunData = [
+  {name:'Mandiri', icon:'&#127981;', saldo:2850000, pct:78, in:6500000, out:3650000, color:'#00d68f'},
+  {name:'BCA',     icon:'&#127982;', saldo:1420000, pct:39, in:3200000, out:1780000, color:'#3b82f6'},
+  {name:'BankJateng',icon:'&#127983;',saldo:980000,  pct:27, in:1500000, out:520000, color:'#a855f7'},
+  {name:'Cash',    icon:'&#128176;', saldo:425000,  pct:12, in:600000,  out:175000, color:'#f59e0b'},
+];
+var akunInit = false;
+function initAkun(){
+  if(akunInit) return; akunInit = true;
+  var c = document.getElementById('akun-cards');
+  c.innerHTML = '';
+  akunData.forEach(function(a,i){
+    var card = document.createElement('div');
+    card.className = 'akun-card';
+    card.setAttribute('data-icon', a.icon);
+    card.innerHTML = '<div class="akun-top"><div class="akun-name">'+a.name+'</div>'+
+      '<div class="akun-status"></div></div>'+
+      '<div class="akun-saldo" style="color:'+a.color+'">'+formatRpFull(a.saldo)+'</div>'+
+      '<div class="akun-sub">'+
+        '<span class="akun-flow up">+'+formatRp(a.in)+'</span>'+
+        '<span class="akun-flow dn">-'+formatRp(a.out)+'</span>'+
+      '</div>'+
+      '<div class="akun-bar"><div class="akun-bar-fill" style="background:'+a.color+'" data-pct="'+a.pct+'"></div></div>';
+    c.appendChild(card);
+    setTimeout(function(){
+      card.classList.add('show');
+      setTimeout(function(){
+        card.querySelector('.akun-bar-fill').style.width = a.pct+'%';
+      }, 200);
+    }, i*150+100);
+  });
+  setTimeout(function(){
+    document.getElementById('neraca-card').classList.add('show');
+  }, 800);
+}
+</script>
+</body>
+</html>
