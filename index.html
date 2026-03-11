@@ -251,8 +251,9 @@ body::before{content:'';position:fixed;inset:0;
   padding:18px;position:relative;overflow:hidden;opacity:0;transform:scale(.95);
   transition:all .5s ease}
 .akun-card.show{opacity:1;transform:scale(1)}
-.akun-card::before{content:attr(data-icon);position:absolute;right:14px;bottom:14px;
-  font-size:36px;opacity:.07}
+.akun-logo{position:absolute;right:12px;bottom:10px;width:52px;height:52px;
+  object-fit:contain;opacity:.18;filter:grayscale(30%)}
+.akun-logo-cash{position:absolute;right:14px;bottom:10px;font-size:40px;opacity:.15;line-height:1}
 .akun-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .akun-name{font-size:12px;font-weight:800;text-transform:uppercase;
   letter-spacing:1px;color:var(--muted2)}
@@ -754,10 +755,10 @@ function formatRpFull(n){
 
 // ── SCENE 4: AKUN ──
 var akunData = [
-  {name:'Mandiri', icon:'&#127981;', saldo:2850000, pct:78, in:6500000, out:3650000, color:'#00d68f'},
-  {name:'BCA',     icon:'&#127982;', saldo:1420000, pct:39, in:3200000, out:1780000, color:'#3b82f6'},
-  {name:'BankJateng',icon:'&#127983;',saldo:980000,  pct:27, in:1500000, out:520000, color:'#a855f7'},
-  {name:'Cash',    icon:'&#128176;', saldo:425000,  pct:12, in:600000,  out:175000, color:'#f59e0b'},
+  {name:'Mandiri',    logo:'https://upload.wikimedia.org/wikipedia/commons/a/ad/Bank_Mandiri_logo_2008.svg', saldo:2850000, pct:78, in:6500000, out:3650000, color:'#00d68f'},
+  {name:'BCA',        logo:'https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia.svg',       saldo:1420000, pct:39, in:3200000, out:1780000, color:'#3b82f6'},
+  {name:'BankJateng', logo:'https://upload.wikimedia.org/wikipedia/commons/6/6a/Bank_Jateng_logo.svg',        saldo:980000,  pct:27, in:1500000, out:520000,  color:'#a855f7'},
+  {name:'Cash',       logo:'',                                                                                 saldo:425000,  pct:12, in:600000,  out:175000,  color:'#f59e0b'},
 ];
 var akunInit = false;
 function initAkun(){
@@ -767,9 +768,12 @@ function initAkun(){
   akunData.forEach(function(a,i){
     var card = document.createElement('div');
     card.className = 'akun-card';
-    card.setAttribute('data-icon', a.icon);
+    var logoHtml = a.logo
+      ? '<img class="akun-logo" src="'+a.logo+'" alt="'+a.name+'" onerror="this.style.display=\'none\'">'
+      : '<div class="akun-logo-cash">💵</div>';
     card.innerHTML = '<div class="akun-top"><div class="akun-name">'+a.name+'</div>'+
       '<div class="akun-status"></div></div>'+
+      logoHtml+
       '<div class="akun-saldo" style="color:'+a.color+'">'+formatRpFull(a.saldo)+'</div>'+
       '<div class="akun-sub">'+
         '<span class="akun-flow up">+'+formatRp(a.in)+'</span>'+
